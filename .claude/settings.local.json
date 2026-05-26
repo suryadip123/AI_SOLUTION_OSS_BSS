@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m pip install langgraph==0.2.28 aiosqlite==0.20.0)",
+      "PowerShell(ollama list *)",
+      "PowerShell($env:PYTHONPATH = \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\"; Set-Location \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\"; & \".\\\\venv\\\\Scripts\\\\uvicorn.exe\" app.main:app --reload --host 0.0.0.0 --port 8000)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-Process *)"
+    ]
+  }
+}
