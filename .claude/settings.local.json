@@ -5,7 +5,10 @@
       "PowerShell(ollama list *)",
       "PowerShell($env:PYTHONPATH = \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\"; Set-Location \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\"; & \".\\\\venv\\\\Scripts\\\\uvicorn.exe\" app.main:app --reload --host 0.0.0.0 --port 8000)",
       "PowerShell(Get-Content *)",
-      "PowerShell(Get-Process *)"
+      "PowerShell(Get-Process *)",
+      "Bash(exist \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\\\\data\\\\telecom.db\" del \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\\\\data\\\\telecom.db\")",
+      "PowerShell(Start-Process -FilePath \"powershell\" -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend'; .\\\\.venv\\\\Scripts\\\\activate; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\" -WindowStyle Normal; \"started\")",
+      "PowerShell(Start-Sleep -Seconds 8; try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -UseBasicParsing -TimeoutSec 10; $r.StatusCode; $r.Content } catch { $_.Exception.Message })"
     ]
   }
 }

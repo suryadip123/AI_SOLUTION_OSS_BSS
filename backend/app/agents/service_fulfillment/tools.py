@@ -1,15 +1,38 @@
 from langchain_core.tools import tool
 
-@tool
-def fetch_service_fulfillment_data(query: str) -> str:
-    """Fetch Service Fulfillment domain data from the local SQLite database."""
-    # TODO: Implement real DB query via SQLAlchemy
-    return f"[Mock] Service Fulfillment data for query: {query}"
+SLA_HOURS = {
+    "SIM_ACTIVATION":  2,
+    "BROADBAND":       24,
+    "NUMBER_PORTING":  72,
+}
+
+STEP_BASELINE_SECONDS = {
+    "Validate":          30.0,
+    "Allocate Resource": 120.0,
+    "Configure":         180.0,
+    "Activate":          240.0,
+    "Confirm":           60.0,
+}
+
+ALERT_TYPES = {
+    "SLA_BREACH":            "CRITICAL",
+    "SLA_AT_RISK":           "HIGH",
+    "STEP_FAILURE":          "HIGH",
+    "FULFILLMENT_DELAY":     "MEDIUM",
+}
+
+ORDER_STATUSES = ["PENDING", "VALIDATING", "PROVISIONING", "TESTING", "COMPLETED", "FAILED"]
 
 @tool
-def analyze_service_fulfillment_metrics(data: str) -> str:
-    """Analyze Service Fulfillment metrics and return insights."""
-    # TODO: Implement ML-based analysis
-    return f"[Mock] Insights for: {data}"
+def get_sla_config() -> str:
+    """Return SLA thresholds and alert severity mappings for service fulfillment orders."""
+    lines = [f"{k}: {v}h SLA" for k, v in SLA_HOURS.items()]
+    lines += [f"{k}: {v} severity" for k, v in ALERT_TYPES.items()]
+    return "\n".join(lines)
 
-TOOLS = [fetch_service_fulfillment_data, analyze_service_fulfillment_metrics]
+@tool
+def get_step_baselines() -> str:
+    """Return average baseline durations per provisioning step."""
+    return "\n".join([f"{k}: {v}s avg" for k, v in STEP_BASELINE_SECONDS.items()])
+
+TOOLS = [get_sla_config, get_step_baselines]

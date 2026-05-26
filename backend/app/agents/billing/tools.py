@@ -1,15 +1,14 @@
 from langchain_core.tools import tool
 
-@tool
-def fetch_billing_data(query: str) -> str:
-    """Fetch Billing domain data from the local SQLite database."""
-    # TODO: Implement real DB query via SQLAlchemy
-    return f"[Mock] Billing data for query: {query}"
+THRESHOLDS = {
+    "bill_gen_success_rate":    {"warning": 95.0, "critical": 85.0, "direction": "below"},
+    "payment_collection_rate":  {"warning": 90.0, "critical": 75.0, "direction": "below"},
+    "dispute_rate":             {"warning":  3.0, "critical":  8.0, "direction": "above"},
+}
 
 @tool
-def analyze_billing_metrics(data: str) -> str:
-    """Analyze Billing metrics and return insights."""
-    # TODO: Implement ML-based analysis
-    return f"[Mock] Insights for: {data}"
+def get_billing_thresholds() -> str:
+    """Return billing health monitoring thresholds."""
+    return str(THRESHOLDS)
 
-TOOLS = [fetch_billing_data, analyze_billing_metrics]
+TOOLS = [get_billing_thresholds]

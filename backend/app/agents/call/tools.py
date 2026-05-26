@@ -1,15 +1,14 @@
 from langchain_core.tools import tool
 
-@tool
-def fetch_call_data(query: str) -> str:
-    """Fetch Call domain data from the local SQLite database."""
-    # TODO: Implement real DB query via SQLAlchemy
-    return f"[Mock] Call data for query: {query}"
+THRESHOLDS = {
+    "call_success_rate": {"warning": 95.0, "critical": 90.0, "direction": "below"},
+    "call_drop_rate":    {"warning":  3.0, "critical":  7.0, "direction": "above"},
+    "avg_duration_min":  {"warning":  2.0, "critical":  1.0, "direction": "below"},
+}
 
 @tool
-def analyze_call_metrics(data: str) -> str:
-    """Analyze Call metrics and return insights."""
-    # TODO: Implement ML-based analysis
-    return f"[Mock] Insights for: {data}"
+def get_call_thresholds() -> str:
+    """Return call analytics monitoring thresholds."""
+    return str(THRESHOLDS)
 
-TOOLS = [fetch_call_data, analyze_call_metrics]
+TOOLS = [get_call_thresholds]

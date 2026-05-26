@@ -1,15 +1,14 @@
 from langchain_core.tools import tool
 
-@tool
-def fetch_service_assurance_data(query: str) -> str:
-    """Fetch Service Assurance domain data from the local SQLite database."""
-    # TODO: Implement real DB query via SQLAlchemy
-    return f"[Mock] Service Assurance data for query: {query}"
+THRESHOLDS = {
+    "availability_pct": {"warning": 99.5, "critical": 99.0, "direction": "below"},
+    "error_rate_pct":   {"warning":  2.0, "critical":  5.0, "direction": "above"},
+    "mttr_hours":       {"warning":  4.0, "critical":  8.0, "direction": "above"},
+}
 
 @tool
-def analyze_service_assurance_metrics(data: str) -> str:
-    """Analyze Service Assurance metrics and return insights."""
-    # TODO: Implement ML-based analysis
-    return f"[Mock] Insights for: {data}"
+def get_service_assurance_thresholds() -> str:
+    """Return service health monitoring thresholds."""
+    return str(THRESHOLDS)
 
-TOOLS = [fetch_service_assurance_data, analyze_service_assurance_metrics]
+TOOLS = [get_service_assurance_thresholds]
