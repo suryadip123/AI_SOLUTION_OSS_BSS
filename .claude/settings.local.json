@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
       "PowerShell(python -m pip install langgraph==0.2.28 aiosqlite==0.20.0)",
       "PowerShell(ollama list *)",
@@ -9,6 +10,25 @@
       "Bash(exist \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\\\\data\\\\telecom.db\" del \"C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend\\\\data\\\\telecom.db\")",
       "PowerShell(Start-Process -FilePath \"powershell\" -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\Admin\\\\Desktop\\\\AI_Solution_OSS_BSS\\\\backend'; .\\\\.venv\\\\Scripts\\\\activate; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\" -WindowStyle Normal; \"started\")",
       "PowerShell(Start-Sleep -Seconds 8; try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/health\" -UseBasicParsing -TimeoutSec 10; $r.StatusCode; $r.Content } catch { $_.Exception.Message })"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [{
+          "type": "command",
+          "command": "echo \"[$(date '+%H:%M:%S')] Written: $CLAUDE_TOOL_INPUT_PATH\" >> .claude/changes.log"
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -Command \"[System.Media.SystemSounds]::Beep.Play()\" && echo 'Session ended' >> .claude/session.log"
+        }]
+      }
     ]
   }
 }

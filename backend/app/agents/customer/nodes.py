@@ -13,35 +13,62 @@ from app.agents.customer.tools import MONITORED_ACCOUNTS, THRESHOLDS
 llm = get_llm()
 
 
-def _jitter(base: float, pct: float = 0.15, lo: float = 0.0, hi: float = 100.0) -> float:
-    """Apply ±pct random variation around base, clamped to [lo, hi]."""
-    delta = base * pct * (random.random() * 2 - 1)
-    return round(max(lo, min(hi, base + delta)), 2)
+def _random_metrics() -> dict:
+    """Generate customer metrics with ~60% healthy / 25% warning / 15% critical split.
+
+    Tier boundaries are derived directly from THRESHOLDS:
+      order_completion_rate: warn<85, crit<70  (below = worse)
+      avg_fulfillment_time : warn>48h, crit>72h (above = worse)
+      sla_breach_rate      : warn>5%,  crit>15% (above = worse)
+    """
+    tier = random.choices(
+        population=["healthy", "warning", "critical"],
+        weights=[0.60, 0.25, 0.15],
+        k=1,
+    )[0]
+
+    if tier == "healthy":
+        completion  = round(random.uniform(85.0, 100.0), 2)
+        fulfillment = round(random.uniform(1.0,   47.9), 2)
+        sla_breach  = round(random.uniform(0.0,    4.9), 2)
+    elif tier == "warning":
+        completion  = round(random.uniform(70.0,  84.9), 2)
+        fulfillment = round(random.uniform(48.0,  71.9), 2)
+        sla_breach  = round(random.uniform(5.0,   14.9), 2)
+    else:  # critical
+        completion  = round(random.uniform(35.0,  69.9), 2)
+        fulfillment = round(random.uniform(72.0, 160.0), 2)
+        sla_breach  = round(random.uniform(15.0,  45.0), 2)
+
+    return {
+        "order_completion_rate": completion,
+        "avg_fulfillment_time":  fulfillment,
+        "sla_breach_rate":       sla_breach,
+    }
 
 
-def _evaluate(completion: float, fulfillment: float, sla_breach: float):
+def _severity(completion: float, fulfillment: float, sla_breach: float):
     """Return (status, severity, breaches) for a customer account."""
     status   = "HEALTHY"
     severity = "NONE"
     breaches = []
 
     checks = [
-        ("Order Completion Rate", completion, "order_completion_rate"),
+        ("Order Completion Rate", completion,  "order_completion_rate"),
         ("Avg Fulfillment Time",  fulfillment, "avg_fulfillment_time"),
         ("SLA Breach Rate",       sla_breach,  "sla_breach_rate"),
     ]
     for label, val, key in checks:
-        cfg = THRESHOLDS[key]
+        cfg      = THRESHOLDS[key]
         is_below = cfg["direction"] == "below"
+        unit     = "%" if key != "avg_fulfillment_time" else "h"
         if (is_below and val < cfg["critical"]) or (not is_below and val > cfg["critical"]):
-            unit = "%" if key != "avg_fulfillment_time" else "h"
             breaches.append(
                 f"{label} at {val}{unit} breaches CRITICAL threshold ({cfg['critical']}{unit})"
             )
             status   = "CRITICAL"
             severity = "CRITICAL"
         elif (is_below and val < cfg["warning"]) or (not is_below and val > cfg["warning"]):
-            unit = "%" if key != "avg_fulfillment_time" else "h"
             breaches.append(
                 f"{label} at {val}{unit} breaches WARNING threshold ({cfg['warning']}{unit})"
             )
@@ -53,50 +80,53 @@ def _evaluate(completion: float, fulfillment: float, sla_breach: float):
 
 
 async def fetch_metrics_node(state: dict) -> dict:
-    """Read base metrics from DB, apply per-scan jitter, evaluate health."""
-    timestamp = datetime.now(timezone.utc).isoformat()
+    """Generate randomized metrics (~60% healthy / 25% warning / 15% critical) per account.
+
+    Profile data (name, segment, region, plan) is still read from the DB so the
+    reports stay contextually meaningful.  Only the live metric values are
+    generated probabilistically — this guarantees the intended health distribution
+    on every agent run instead of always reflecting the seeded-DB baseline.
+    """
+    timestamp        = datetime.now(timezone.utc).isoformat()
     customer_reports: list[dict] = []
     alerts:           list[dict] = []
 
     async with AsyncSessionLocal() as db:
         rows = (
             await db.execute(
-                select(CustomerAccount).where(CustomerAccount.account_id.in_(MONITORED_ACCOUNTS))
+                select(CustomerAccount).where(
+                    CustomerAccount.account_id.in_(MONITORED_ACCOUNTS)
+                )
             )
         ).scalars().all()
     db_map = {r.account_id: r for r in rows}
 
     for acc_id in MONITORED_ACCOUNTS:
         acc = db_map.get(acc_id)
-        if acc:
-            completion  = _jitter(acc.order_completion_rate, pct=0.08, lo=0.0,  hi=100.0)
-            fulfillment = _jitter(acc.avg_fulfillment_time,  pct=0.15, lo=1.0,  hi=200.0)
-            sla_breach  = _jitter(acc.sla_breach_rate,       pct=0.20, lo=0.0,  hi=100.0)
-            name        = acc.name
-            segment     = acc.segment
-            region      = acc.region
-            plan        = acc.plan
-            active_ord  = acc.active_orders
-        else:
-            completion  = round(random.uniform(60, 100), 2)
-            fulfillment = round(random.uniform(10, 100), 2)
-            sla_breach  = round(random.uniform(0,   25), 2)
-            name        = acc_id
-            segment     = "Unknown"
-            region      = "—"
-            plan        = "—"
-            active_ord  = 0
 
-        status, severity, breaches = _evaluate(completion, fulfillment, sla_breach)
+        # ── Probabilistic metric generation ─────────────────────────────────
+        m           = _random_metrics()
+        completion  = m["order_completion_rate"]
+        fulfillment = m["avg_fulfillment_time"]
+        sla_breach  = m["sla_breach_rate"]
+
+        # ── Profile data from DB (fallback to safe defaults) ────────────────
+        name       = acc.name          if acc else acc_id
+        segment    = acc.segment       if acc else "Unknown"
+        region     = acc.region        if acc else "—"
+        plan       = acc.plan          if acc else "—"
+        active_ord = acc.active_orders if acc else 0
+
+        status, severity, breaches = _severity(completion, fulfillment, sla_breach)
 
         report = {
-            "account_id":   acc_id,
-            "name":         name,
-            "segment":      segment,
-            "region":       region,
-            "plan":         plan,
+            "account_id":    acc_id,
+            "name":          name,
+            "segment":       segment,
+            "region":        region,
+            "plan":          plan,
             "active_orders": active_ord,
-            "status":       status,
+            "status":        status,
             "metrics": {
                 "order_completion_rate": f"{completion}%",
                 "avg_fulfillment_time":  f"{fulfillment}h",
